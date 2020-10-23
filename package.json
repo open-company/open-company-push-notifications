@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@sentry/serverless": "^5.27.1",
+    "expo-server-sdk": "^3.3.0"
+  }
+}
