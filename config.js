@@ -1,4 +1,20 @@
+// Expo Access Token: get or create one from https://expo.io/settings/access-tokens
 module.exports.expoAccessToken = () => {
-  // create / fetch dynamic data here (e.g. call an API)
   return process.env.EXPO_ACCESS_TOKEN;
+}
+// Sentry Environment
+module.exports.sentryEnv = () => {
+  return process.env.SENTRY_ENVIRONMENT;
+}
+// Sentry DSN
+module.exports.sentryDSN = () => {
+  return process.env.SENTRY_DSN;
+}
+// Sentry release
+module.exports.sentryRelease = () => {
+  return process.env.SENTRY_RELEASE;
+}
+// Sentry deploy
+module.exports.sentryReleaseDeploy = () => {
+  return process.env.SENTRY_RELEASE_DEPLOY;
 }

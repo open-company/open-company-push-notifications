@@ -60,11 +60,19 @@ functions:
   sendPushNotifications:
     environment:
       expoAccessToken: ${file(./config.js):expoAccessToken}
+      sentryDSN: ${file(./config.js):sentryDSN}
+      sentryEnv: ${file(./config.js):sentryEnv}
+      sentryRelease: ${file(./config.js):sentryRelease}
+      sentryReleaseDeploy: ${file(./config.js):sentryReleaseDeploy}
     handler: handler.sendPushNotifications
     
   getPushNotificationReceipts:
     environment:
       expoAccessToken: ${file(./config.js):expoAccessToken}
+      sentryDSN: ${file(./config.js):sentryDSN}
+      sentryEnv: ${file(./config.js):sentryEnv}
+      sentryRelease: ${file(./config.js):sentryRelease}
+      sentryReleaseDeploy: ${file(./config.js):sentryReleaseDeploy}
     handler: handler.getPushNotificationReceipts
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events

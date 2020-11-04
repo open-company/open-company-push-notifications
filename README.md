@@ -49,9 +49,5 @@ cd expo-push-notifications
 serverless deploy --stage dev
 ```
 
-**NB: the env var EXPO_PUSH_TOKEN variable, that is read by serverless throught config.js, is directly configured in the AWS Lambda from the Web GUI.**
-
-At this time it's not possible to set environment variable via Ansible while deploying.
-
 This will output the name of a Lambda function, the prefix of which will be used in the following configuration. For example, if the created Lambda function is named
 `expo-push-notifications-dev-sendPushNotifications`, then the prefix would be `expo-push-notifications-dev-`.

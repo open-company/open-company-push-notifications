@@ -1,11 +1,16 @@
 const { Expo } = require('expo-server-sdk');
 const Sentry = require('@sentry/serverless');
 
-const sentryEnv = process.env.SENTRY_ENVIRONMENT || 'local',
+const sentryDSN = process.env.sentryDSN,
+      sentryEnv = process.env.sentryEnv || 'local',
+      sentryRelease = process.env.sentryRelease || 'release',
+      sentryReleaseDeploy = process.env.sentryReleaseDeploy || 'deploy',;
 
 Sentry.AWSLambda.init({
-  dsn: 'https://7a1944c77f8d4dea85a72b25398d795c@o23653.ingest.sentry.io/5480295',
+  dsn: sentryDSN,
   environment: sentryEnv,
+  release: sentryRelease,
+  deploy: sentryReleaseDeploy,
   tracesSampleRate: 1.0
 });
 
@@ -23,11 +28,9 @@ const errorResponse = (statusCode, error) => {
   });
 }
 
-// module.exports.sendPushNotifications = async event => {};
-
 module.exports.sendPushNotifications = Sentry.AWSLambda.wrapHandler(async (event, context) => {
-  console.log(`sendPushNotifications started on env ${sentryEnv} expoAccessToken ${process.env.expoAccessToken} EXPO_ACCESS_TOKEN ${process.env.EXPO_ACCESS_TOKEN}`);
-  let expo = new Expo({ accessToken: process.env.EXPO_ACCESS_TOKEN || process.env.expoAccessToken });
+  console.log(`sendPushNotifications started on env ${sentryEnv}`);
+  let expo = new Expo({ accessToken: process.env.expoAccessToken });
   const notifications = event.notifications;
 
   let messages = [];
@@ -100,7 +103,7 @@ module.exports.sendPushNotifications = Sentry.AWSLambda.wrapHandler(async (event
 module.exports.getPushNotificationReceipts =  Sentry.AWSLambda.wrapHandler(async (event, context) => {
   console.log(`getPushNotificationReceipts started on env ${sentryEnv}`);
   const tickets = event.tickets;
-  let expo = new Expo({ accessToken: process.env.EXPO_ACCESS_TOKEN || process.env.expoAccessToken });
+  let expo = new Expo({ accessToken: process.env.expoAccessToken });
   let receiptIds = [];
   console.log(`Got ${tickets.length} tickets...`);
   for (let ticket of tickets) {
