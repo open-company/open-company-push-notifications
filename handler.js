@@ -1,12 +1,12 @@
 'use strict';
 
 const { Expo } = require('expo-server-sdk');
-const Sentry = require("@sentry/serverless");
+const Sentry = require('@sentry/serverless');
 
 Sentry.AWSLambda.init({
   dsn: 'https://7a1944c77f8d4dea85a72b25398d795c@o23653.ingest.sentry.io/5480295',
   environment: process.env.SENTRY_ENVIRONMENT || 'local',
-  tracesSampleRate: 1.0,
+  tracesSampleRate: 1.0
 });
 
 const successResponse = (data) => {
@@ -134,4 +134,4 @@ module.exports.getPushNotificationReceipts =  Sentry.AWSLambda.wrapHandler(async
   }
 
   return successResponse({ receipts });
-};
+});
