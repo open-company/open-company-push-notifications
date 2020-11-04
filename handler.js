@@ -44,16 +44,17 @@ module.exports.sendPushNotifications = Sentry.AWSLambda.wrapHandler(async (event
       console.log(`Failed: not an expo push token`);
       const msg = `Push token "${notif.pushToken}" is not valid push token`;
       console.error(msg);
-      return errorResponse(400, msg);
+      continue;
+      // return errorResponse(400, msg);
+    } else {
+      messages.push({
+        to: notif.pushToken,
+        sound: 'default',
+        body: notif.body,
+        data: notif.data
+      });
+      console.log(`Pushed!`);
     }
-
-    messages.push({
-      to: notif.pushToken,
-      sound: 'default',
-      body: notif.body,
-      data: notif.data
-    });
-    console.log(`Pushed!`);
   }
   console.log(`Retrieving tickets chucks.`);
   // The Expo push notification service accepts batches of notifications so
