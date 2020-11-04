@@ -4,7 +4,7 @@ const Sentry = require('@sentry/serverless');
 const sentryDSN = process.env.sentryDSN,
       sentryEnv = process.env.sentryEnv || 'local',
       sentryRelease = process.env.sentryRelease || 'release',
-      sentryReleaseDeploy = process.env.sentryReleaseDeploy || 'deploy',;
+      sentryReleaseDeploy = process.env.sentryReleaseDeploy || 'deploy';
 
 Sentry.AWSLambda.init({
   dsn: sentryDSN,
