@@ -1,18 +1,26 @@
 const { Expo } = require('expo-server-sdk');
 const Sentry = require('@sentry/serverless');
 
-const sentryDSN = process.env.sentryDSN,
-      sentryEnv = process.env.sentryEnv || 'local',
-      sentryRelease = process.env.sentryRelease || 'release',
-      sentryReleaseDeploy = process.env.sentryReleaseDeploy || 'deploy';
+function sentryInit() {
+  console.log(`Initializing Sentry...`);
+  const sentryDSN = process.env.sentryDSN,
+        sentryEnv = process.env.sentryEnv || 'local',
+        sentryRelease = process.env.sentryRelease || 'release',
+        sentryReleaseDeploy = process.env.sentryReleaseDeploy || 'deploy';
 
-Sentry.AWSLambda.init({
-  dsn: sentryDSN,
-  environment: sentryEnv,
-  release: sentryRelease,
-  deploy: sentryReleaseDeploy,
-  tracesSampleRate: 1.0
-});
+  console.log(`Config: ${{sentryDSN, sentryEnv, sentryRelease, sentryReleaseDeploy}}`);
+
+  Sentry.AWSLambda.init({
+    dsn: sentryDSN,
+    environment: sentryEnv,
+    release: sentryRelease,
+    deploy: sentryReleaseDeploy,
+    tracesSampleRate: 1.0
+  });
+
+  console.log(`Sentry initialized!`);
+  return sentryEnv;
+}
 
 const successResponse = (data) => {
   return {
@@ -21,14 +29,8 @@ const successResponse = (data) => {
   };
 }
 
-const errorResponse = (statusCode, error) => {
-  return ({
-    statusCode,
-    body: JSON.stringify({ error }, null, 2)
-  });
-}
-
 module.exports.sendPushNotifications = Sentry.AWSLambda.wrapHandler(async (event, context) => {
+  const sentryEnv = sentryInit();
   console.log(`sendPushNotifications started on env ${sentryEnv}`);
   let expo = new Expo({ accessToken: process.env.expoAccessToken });
   const notifications = event.notifications;
@@ -43,9 +45,8 @@ module.exports.sendPushNotifications = Sentry.AWSLambda.wrapHandler(async (event
     if (!Expo.isExpoPushToken(notif.pushToken)) {
       console.log(`Failed: not an expo push token`);
       const msg = `Push token "${notif.pushToken}" is not valid push token`;
-      console.error(msg);
+      Sentry.captureError(new Error(msg, notif));
       continue;
-      // return errorResponse(400, msg);
     } else {
       messages.push({
         to: notif.pushToken,
@@ -76,8 +77,9 @@ module.exports.sendPushNotifications = Sentry.AWSLambda.wrapHandler(async (event
       console.log(`Done chuck: "${ticketChunk}".`);
     } catch (error) {
       console.log(`Failed on a chuck: ${error}.`);
-      console.error(error);
-      return errorResponse(500, error);
+      // console.error(error);
+      Sentry.captureError(error);
+      continue;
     }
   }
 
@@ -102,6 +104,7 @@ module.exports.sendPushNotifications = Sentry.AWSLambda.wrapHandler(async (event
 // Apple and Google so you can handle it appropriately.
 
 module.exports.getPushNotificationReceipts =  Sentry.AWSLambda.wrapHandler(async (event, context) => {
+  const sentryEnv = sentryInit();
   console.log(`getPushNotificationReceipts started on env ${sentryEnv}`);
   const tickets = event.tickets;
   let expo = new Expo({ accessToken: process.env.expoAccessToken });
@@ -135,18 +138,19 @@ module.exports.getPushNotificationReceipts =  Sentry.AWSLambda.wrapHandler(async
           console.log(`Status is ok, moving on.`);
           continue;
         } else if (receipt.status === 'error') {
-          console.error(`There was an error sending a notification: ${receipt.message}`);
+          // console.error(`There was an error sending a notification: ${receipt.message}`);
+          const errorMessage = `There was an error sending a notification: ${receipt.message}`;
+          Sentry.captureError(new Error(errorMessage, receipt));
           if (receipt.details && receipt.details.error) {
-            console.error(
-              `The error code is ${receipt.details.error}. See https://docs.expo.io/versions/latest/guides/push-notifications#response-format for error code docs.`
-            );
+            const msg = `The error code is ${receipt.details.error}. See https://docs.expo.io/versions/latest/guides/push-notifications#response-format for error code docs.`;
+            Sentry.captureMessage(msg);
           }
         }
       }
     } catch (error) {
       console.log(`Unhandled error: ${error}`);
-      console.error(error);
-      return errorResponse(500, error);
+      Sentry.captureError(error);
+      continue;
     }
   }
 
