@@ -17,11 +17,11 @@ service: expo-push-notifications
 
 # You can pin your service to only deploy with a specific Serverless version
 # Check out our docs for more details
-# frameworkVersion: "=X.X.X"
+frameworkVersion: "^2.8.0"
 
 provider:
   name: aws
-  runtime: nodejs10.x
+  runtime: nodejs12.x
 
 # you can overwrite defaults here
 #  stage: dev
@@ -58,8 +58,13 @@ provider:
 
 functions:
   sendPushNotifications:
+    environment:
+      expoAccessToken: ${file(./config.js):expoAccessToken}
     handler: handler.sendPushNotifications
+    
   getPushNotificationReceipts:
+    environment:
+      expoAccessToken: ${file(./config.js):expoAccessToken}
     handler: handler.getPushNotificationReceipts
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
@@ -99,7 +104,7 @@ functions:
 
 #    Define function environment variables here
 #    environment:
-#      variable2: value2
+#      expo-access-token: ${file(./config.js):expoAccessToken}
 
 # you can add CloudFormation resource templates here
 #resources:

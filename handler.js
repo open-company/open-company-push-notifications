@@ -1,11 +1,11 @@
-'use strict';
-
 const { Expo } = require('expo-server-sdk');
 const Sentry = require('@sentry/serverless');
 
+const sentryEnv = process.env.SENTRY_ENVIRONMENT || 'local',
+
 Sentry.AWSLambda.init({
   dsn: 'https://7a1944c77f8d4dea85a72b25398d795c@o23653.ingest.sentry.io/5480295',
-  environment: process.env.SENTRY_ENVIRONMENT || 'local',
+  environment: sentryEnv,
   tracesSampleRate: 1.0
 });
 
@@ -26,16 +26,20 @@ const errorResponse = (statusCode, error) => {
 // module.exports.sendPushNotifications = async event => {};
 
 module.exports.sendPushNotifications = Sentry.AWSLambda.wrapHandler(async (event, context) => {
-  let expo = new Expo();
+  console.log(`sendPushNotifications started on env ${sentryEnv} expoAccessToken ${process.env.expoAccessToken} EXPO_ACCESS_TOKEN ${process.env.EXPO_ACCESS_TOKEN}`);
+  let expo = new Expo({ accessToken: process.env.EXPO_ACCESS_TOKEN || process.env.expoAccessToken });
   const notifications = event.notifications;
 
   let messages = [];
+  console.log(`Trying to send ${notifications.length} notifications...`);
   for (let notif of notifications) {
     // Each push token looks like ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]
+    console.log(`Try with: "${notif.pushToken}"`);
 
     // Check that all your push tokens appear to be valid Expo push tokens
     if (!Expo.isExpoPushToken(notif.pushToken)) {
-      const msg = `Push token ${notif.pushToken} is not valid push token`;
+      console.log(`Failed: not an expo push token`);
+      const msg = `Push token "${notif.pushToken}" is not valid push token`;
       console.error(msg);
       return errorResponse(400, msg);
     }
@@ -46,8 +50,9 @@ module.exports.sendPushNotifications = Sentry.AWSLambda.wrapHandler(async (event
       body: notif.body,
       data: notif.data
     });
+    console.log(`Pushed!`);
   }
-
+  console.log(`Retrieving tickets chucks.`);
   // The Expo push notification service accepts batches of notifications so
   // that you don't need to send 1000 requests to send 1000 notifications. We
   // recommend you batch your notifications to reduce the number of requests
@@ -59,17 +64,20 @@ module.exports.sendPushNotifications = Sentry.AWSLambda.wrapHandler(async (event
   // different strategies you could use. A simple one is to send one chunk at a
   // time, which nicely spreads the load out over time:
   let tickets = [];
+  console.log(`Sending ${chunks.length} chunks...`);
   for (let chunk of chunks) {
     try {
       let ticketChunk = await expo.sendPushNotificationsAsync(chunk);
-      console.log(ticketChunk);
       tickets.push(...ticketChunk);
+      console.log(`Done chuck: "${ticketChunk}".`);
     } catch (error) {
+      console.log(`Failed on a chuck: ${error}.`);
       console.error(error);
       return errorResponse(500, error);
     }
   }
 
+  console.log(`sendPushNotifications all good.`);
   return successResponse({ tickets });
 });
 
@@ -90,10 +98,11 @@ module.exports.sendPushNotifications = Sentry.AWSLambda.wrapHandler(async (event
 // Apple and Google so you can handle it appropriately.
 
 module.exports.getPushNotificationReceipts =  Sentry.AWSLambda.wrapHandler(async (event, context) => {
-
+  console.log(`getPushNotificationReceipts started on env ${sentryEnv}`);
   const tickets = event.tickets;
-  let expo = new Expo();
+  let expo = new Expo({ accessToken: process.env.EXPO_ACCESS_TOKEN || process.env.expoAccessToken });
   let receiptIds = [];
+  console.log(`Got ${tickets.length} tickets...`);
   for (let ticket of tickets) {
     // NOTE: Not all tickets have IDs; for example, tickets for notifications
     // that could not be enqueued will have error information and no receipt ID.
@@ -104,19 +113,22 @@ module.exports.getPushNotificationReceipts =  Sentry.AWSLambda.wrapHandler(async
 
   let receipts = [];
   let receiptIdChunks = expo.chunkPushNotificationReceiptIds(receiptIds);
+  console.log(`Found ${receiptIdChunks.length} chucks of receipt ID...`);
   for (let chunk of receiptIdChunks) {
     try {
       let receiptChunk = await expo.getPushNotificationReceiptsAsync(chunk);
-      console.log(receiptChunk);
       receipts.push(receiptChunk);
+      console.log(`Pushed "${receiptChunk}".`);
 
       // The receipts specify whether Apple or Google successfully received the
       // notification and information about an error, if one occurred.
       // This loop is here strictly for the purposes of logging any problems/errors
       // for audit purposes; it does not affect this function's return value.
+      console.log(`Checking status for ${receiptChunk.length} receipt chunks.`);
       for (let rid in receiptChunk) {
         const receipt = receiptChunk[rid];
         if (receipt.status === 'ok') {
+          console.log(`Status is ok, moving on.`);
           continue;
         } else if (receipt.status === 'error') {
           console.error(`There was an error sending a notification: ${receipt.message}`);
@@ -128,10 +140,12 @@ module.exports.getPushNotificationReceipts =  Sentry.AWSLambda.wrapHandler(async
         }
       }
     } catch (error) {
+      console.log(`Unhandled error: ${error}`);
       console.error(error);
       return errorResponse(500, error);
     }
   }
 
+  console.log(`getPushNotificationReceipts all good.`);
   return successResponse({ receipts });
 });
