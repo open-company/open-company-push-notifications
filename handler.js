@@ -156,8 +156,8 @@ module.exports.getPushNotificationReceipts =  Sentry.AWSLambda.wrapHandler(async
           const errorMessage = `There was an error sending a notification: ${receipt.message}`;
           sentryCaptureException(new Error(errorMessage, receipt), {...chunk, receiptChunk, receipt});
           if (receipt.details && receipt.details.error) {
-            const msg = `The error code is ${receipt.details.error}. See https://docs.expo.io/versions/latest/guides/push-notifications#response-format for error code docs.`;
-            sentryCaptureMessage(msg, {...chunk, receipt});
+            // See https://docs.expo.io/versions/latest/guides/push-notifications#response-format for error code docs.
+            sentryCaptureError(new Error(`Receipt error: ${receipt.details.error}`, {...chunk, receipt}), {...chunk, receipt});
           }
         }
       }
