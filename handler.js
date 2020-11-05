@@ -21,8 +21,13 @@ Sentry.AWSLambda.init({
 console.log(`Sentry initialized!`);
 console.groupEnd();
 
-async function sentryCaptureException(err) {
-  Sentry.captureException(err);
+async function sentryCaptureException(err, details) {
+  Sentry.captureException(err, details);
+  await new Promise(resolve => Sentry.getCurrentHub().getClient().close(2000).then(resolve));
+}
+
+async function sentryCaptureMessage(msg, details) {
+  Sentry.captureMessage(msg, details);
   await new Promise(resolve => Sentry.getCurrentHub().getClient().close(2000).then(resolve));
 }
 
@@ -48,7 +53,7 @@ module.exports.sendPushNotifications = Sentry.AWSLambda.wrapHandler(async (event
     if (!Expo.isExpoPushToken(notif.pushToken)) {
       console.log(`Failed: not an expo push token`);
       const msg = `Push token ${notif.pushToken} is not valid push token`;
-      sentryCaptureException(new Error(msg, notif));
+      sentryCaptureException(new Error(msg, notif), notif);
       continue;
     } else {
       messages.push({
@@ -81,7 +86,7 @@ module.exports.sendPushNotifications = Sentry.AWSLambda.wrapHandler(async (event
     } catch (error) {
       console.log(`Failed on a chunck: ${error}.`);
       // console.error(error);
-      sentryCaptureException(error);
+      sentryCaptureException(error, ticketChunk);
       continue;
     }
   }
@@ -142,16 +147,16 @@ module.exports.getPushNotificationReceipts =  Sentry.AWSLambda.wrapHandler(async
         } else if (receipt.status === 'error') {
           // console.error(`There was an error sending a notification: ${receipt.message}`);
           const errorMessage = `There was an error sending a notification: ${receipt.message}`;
-          sentryCaptureException(new Error(errorMessage, receipt));
+          sentryCaptureException(new Error(errorMessage, receipt), {...chunk, receiptChunk, receipt});
           if (receipt.details && receipt.details.error) {
             const msg = `The error code is ${receipt.details.error}. See https://docs.expo.io/versions/latest/guides/push-notifications#response-format for error code docs.`;
-            Sentry.captureMessage(msg);
+            sentryCaptureMessage(msg, {...chunk, receipt});
           }
         }
       }
     } catch (error) {
       console.log(`Unhandled error: ${error}`);
-      sentryCaptureException(error);
+      sentryCaptureException(error, chunk);
       continue;
     }
   }
