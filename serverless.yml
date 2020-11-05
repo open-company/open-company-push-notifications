@@ -60,7 +60,7 @@ functions:
   sendPushNotifications:
     environment:
       expoAccessToken: ${file(./config.js):expoAccessToken}
-      sentryDSN: ${file(./config.js):sentryDSN}
+      sentryDsn: ${file(./config.js):sentryDsn}
       sentryEnv: ${file(./config.js):sentryEnv}
       sentryRelease: ${file(./config.js):sentryRelease}
       sentryReleaseDeploy: ${file(./config.js):sentryReleaseDeploy}
@@ -69,7 +69,7 @@ functions:
   getPushNotificationReceipts:
     environment:
       expoAccessToken: ${file(./config.js):expoAccessToken}
-      sentryDSN: ${file(./config.js):sentryDSN}
+      sentryDsn: ${file(./config.js):sentryDsn}
       sentryEnv: ${file(./config.js):sentryEnv}
       sentryRelease: ${file(./config.js):sentryRelease}
       sentryReleaseDeploy: ${file(./config.js):sentryReleaseDeploy}

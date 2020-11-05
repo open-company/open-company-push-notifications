@@ -51,3 +51,17 @@ serverless deploy --stage dev
 
 This will output the name of a Lambda function, the prefix of which will be used in the following configuration. For example, if the created Lambda function is named
 `expo-push-notifications-dev-sendPushNotifications`, then the prefix would be `expo-push-notifications-dev-`.
+
+You can then test it by sending a test payload like:
+
+```json
+{
+  "notifications": [{"pushToken": "ExpoPushToken[AlmostValidToken]",
+                    "body": "Some text here",
+                    "data": {}},
+                    {"pushToken": "VeryBadToken",
+                     "body": "Some text here",
+                     "data": {}}
+                  ]
+}
+```

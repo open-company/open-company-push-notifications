@@ -1,25 +1,29 @@
 const { Expo } = require('expo-server-sdk');
 const Sentry = require('@sentry/serverless');
 
-function sentryInit() {
-  console.log(`Initializing Sentry...`);
-  const sentryDSN = process.env.sentryDSN,
-        sentryEnv = process.env.sentryEnv || 'local',
-        sentryRelease = process.env.sentryRelease || 'release',
-        sentryReleaseDeploy = process.env.sentryReleaseDeploy || 'deploy';
+console.groupCollapsed(`Initializing Sentry...`);
 
-  console.log(`Config: ${{sentryDSN, sentryEnv, sentryRelease, sentryReleaseDeploy}}`);
+const sentryDsn = process.env.sentryDsn,
+      sentryEnv = process.env.sentryEnv || 'local',
+      sentryRelease = process.env.sentryRelease || 'release',
+      sentryReleaseDeploy = process.env.sentryReleaseDeploy || 'deploy';
 
-  Sentry.AWSLambda.init({
-    dsn: sentryDSN,
-    environment: sentryEnv,
-    release: sentryRelease,
-    deploy: sentryReleaseDeploy,
-    tracesSampleRate: 1.0
-  });
+console.log(`Config: ${{sentryDsn, sentryEnv, sentryRelease, sentryReleaseDeploy}}`);
 
-  console.log(`Sentry initialized!`);
-  return sentryEnv;
+Sentry.AWSLambda.init({
+  dsn: sentryDsn,
+  environment: sentryEnv,
+  release: sentryRelease,
+  deploy: sentryReleaseDeploy,
+  tracesSampleRate: 1.0
+});
+
+console.log(`Sentry initialized!`);
+console.groupEnd();
+
+async function sentryCaptureException(err) {
+  Sentry.captureException(err);
+  await new Promise(resolve => Sentry.getCurrentHub().getClient().close(2000).then(resolve));
 }
 
 const successResponse = (data) => {
@@ -30,8 +34,7 @@ const successResponse = (data) => {
 }
 
 module.exports.sendPushNotifications = Sentry.AWSLambda.wrapHandler(async (event, context) => {
-  const sentryEnv = sentryInit();
-  console.log(`sendPushNotifications started on env ${sentryEnv}`);
+  console.log(`sendPushNotifications started (env: ${sentryEnv})`);
   let expo = new Expo({ accessToken: process.env.expoAccessToken });
   const notifications = event.notifications;
 
@@ -44,8 +47,8 @@ module.exports.sendPushNotifications = Sentry.AWSLambda.wrapHandler(async (event
     // Check that all your push tokens appear to be valid Expo push tokens
     if (!Expo.isExpoPushToken(notif.pushToken)) {
       console.log(`Failed: not an expo push token`);
-      const msg = `Push token "${notif.pushToken}" is not valid push token`;
-      Sentry.captureError(new Error(msg, notif));
+      const msg = `Push token ${notif.pushToken} is not valid push token`;
+      sentryCaptureException(new Error(msg, notif));
       continue;
     } else {
       messages.push({
@@ -57,7 +60,7 @@ module.exports.sendPushNotifications = Sentry.AWSLambda.wrapHandler(async (event
       console.log(`Pushed!`);
     }
   }
-  console.log(`Retrieving tickets chucks.`);
+  console.log(`Retrieving tickets chuncks.`);
   // The Expo push notification service accepts batches of notifications so
   // that you don't need to send 1000 requests to send 1000 notifications. We
   // recommend you batch your notifications to reduce the number of requests
@@ -78,12 +81,12 @@ module.exports.sendPushNotifications = Sentry.AWSLambda.wrapHandler(async (event
     } catch (error) {
       console.log(`Failed on a chuck: ${error}.`);
       // console.error(error);
-      Sentry.captureError(error);
+      sentryCaptureException(error);
       continue;
     }
   }
 
-  console.log(`sendPushNotifications all good.`);
+  console.log(`sendPushNotifications all good: ${JSON.stringify(tickets)}`);
   return successResponse({ tickets });
 });
 
@@ -104,8 +107,7 @@ module.exports.sendPushNotifications = Sentry.AWSLambda.wrapHandler(async (event
 // Apple and Google so you can handle it appropriately.
 
 module.exports.getPushNotificationReceipts =  Sentry.AWSLambda.wrapHandler(async (event, context) => {
-  const sentryEnv = sentryInit();
-  console.log(`getPushNotificationReceipts started on env ${sentryEnv}`);
+  console.log(`getPushNotificationReceipts started (env: ${sentryEnv})`);
   const tickets = event.tickets;
   let expo = new Expo({ accessToken: process.env.expoAccessToken });
   let receiptIds = [];
@@ -120,7 +122,7 @@ module.exports.getPushNotificationReceipts =  Sentry.AWSLambda.wrapHandler(async
 
   let receipts = [];
   let receiptIdChunks = expo.chunkPushNotificationReceiptIds(receiptIds);
-  console.log(`Found ${receiptIdChunks.length} chucks of receipt ID...`);
+  console.log(`Found ${receiptIdChunks.length} chuncks of receipt ID...`);
   for (let chunk of receiptIdChunks) {
     try {
       let receiptChunk = await expo.getPushNotificationReceiptsAsync(chunk);
@@ -140,7 +142,7 @@ module.exports.getPushNotificationReceipts =  Sentry.AWSLambda.wrapHandler(async
         } else if (receipt.status === 'error') {
           // console.error(`There was an error sending a notification: ${receipt.message}`);
           const errorMessage = `There was an error sending a notification: ${receipt.message}`;
-          Sentry.captureError(new Error(errorMessage, receipt));
+          sentryCaptureException(new Error(errorMessage, receipt));
           if (receipt.details && receipt.details.error) {
             const msg = `The error code is ${receipt.details.error}. See https://docs.expo.io/versions/latest/guides/push-notifications#response-format for error code docs.`;
             Sentry.captureMessage(msg);
@@ -149,7 +151,7 @@ module.exports.getPushNotificationReceipts =  Sentry.AWSLambda.wrapHandler(async
       }
     } catch (error) {
       console.log(`Unhandled error: ${error}`);
-      Sentry.captureError(error);
+      sentryCaptureException(error);
       continue;
     }
   }

@@ -5,16 +5,16 @@ module.exports.expoAccessToken = () => {
 // Sentry Environment
 module.exports.sentryEnv = () => {
   return process.env.SENTRY_ENVIRONMENT;
-}
+};
 // Sentry DSN
-module.exports.sentryDSN = () => {
+module.exports.sentryDsn = () => {
   return process.env.SENTRY_DSN;
-}
+};
 // Sentry release
 module.exports.sentryRelease = () => {
   return process.env.SENTRY_RELEASE;
-}
+};
 // Sentry deploy
 module.exports.sentryReleaseDeploy = () => {
   return process.env.SENTRY_RELEASE_DEPLOY;
-}
+};
