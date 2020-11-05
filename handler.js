@@ -8,7 +8,7 @@ const sentryDsn = process.env.sentryDsn,
       sentryRelease = process.env.sentryRelease || 'release',
       sentryReleaseDeploy = process.env.sentryReleaseDeploy || 'deploy';
 
-console.log(`Config: ${{sentryDsn, sentryEnv, sentryRelease, sentryReleaseDeploy}}`);
+console.log(`Config is SentryDSN: ${sentryDsn}, SentryEnv: ${sentryEnv}, SentryRelease: ${sentryRelease}, SentryReleaseDeploy: ${sentryReleaseDeploy}`);
 
 Sentry.AWSLambda.init({
   dsn: sentryDsn,
@@ -38,6 +38,13 @@ const successResponse = (data) => {
   };
 }
 
+const errorResponse = (statusCode, error) => {
+  return ({
+    statusCode,
+    body: JSON.stringify({ error }, null, 2)
+  });
+}
+
 module.exports.sendPushNotifications = Sentry.AWSLambda.wrapHandler(async (event, context) => {
   console.log(`sendPushNotifications started (env: ${sentryEnv})`);
   let expo = new Expo({ accessToken: process.env.expoAccessToken });
@@ -54,7 +61,7 @@ module.exports.sendPushNotifications = Sentry.AWSLambda.wrapHandler(async (event
       console.log(`Failed: not an expo push token`);
       const msg = `Push token ${notif.pushToken} is not valid push token`;
       sentryCaptureException(new Error(msg, notif), notif);
-      continue;
+      return errorResponse(400, msg);
     } else {
       messages.push({
         to: notif.pushToken,
@@ -87,7 +94,7 @@ module.exports.sendPushNotifications = Sentry.AWSLambda.wrapHandler(async (event
       console.log(`Failed on a chunck: ${error}.`);
       // console.error(error);
       sentryCaptureException(error, ticketChunk);
-      continue;
+      return errorResponse(500, error);
     }
   }
 
@@ -132,7 +139,7 @@ module.exports.getPushNotificationReceipts =  Sentry.AWSLambda.wrapHandler(async
     try {
       let receiptChunk = await expo.getPushNotificationReceiptsAsync(chunk);
       receipts.push(receiptChunk);
-      console.log(`Pushed "${receiptChunk}".`);
+      console.log(`Pushed ${JSON.stringify(receiptChunk)}.`);
 
       // The receipts specify whether Apple or Google successfully received the
       // notification and information about an error, if one occurred.
@@ -145,7 +152,7 @@ module.exports.getPushNotificationReceipts =  Sentry.AWSLambda.wrapHandler(async
           console.log(`Status is ok, moving on.`);
           continue;
         } else if (receipt.status === 'error') {
-          // console.error(`There was an error sending a notification: ${receipt.message}`);
+          console.log(`Found an error in receipt ${JSON.stringify(receipt)}, reporting`);
           const errorMessage = `There was an error sending a notification: ${receipt.message}`;
           sentryCaptureException(new Error(errorMessage, receipt), {...chunk, receiptChunk, receipt});
           if (receipt.details && receipt.details.error) {
@@ -155,9 +162,9 @@ module.exports.getPushNotificationReceipts =  Sentry.AWSLambda.wrapHandler(async
         }
       }
     } catch (error) {
-      console.log(`Unhandled error: ${error}`);
+      console.log(`Unhandled error: ${error}, reporting.`);
       sentryCaptureException(error, chunk);
-      continue;
+      return errorResponse(500, error);
     }
   }
 
