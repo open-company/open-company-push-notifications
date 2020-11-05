@@ -77,9 +77,9 @@ module.exports.sendPushNotifications = Sentry.AWSLambda.wrapHandler(async (event
     try {
       let ticketChunk = await expo.sendPushNotificationsAsync(chunk);
       tickets.push(...ticketChunk);
-      console.log(`Done chuck: "${ticketChunk}".`);
+      console.log(`Done chunck: ${JSON.stringify(ticketChunk)}.`);
     } catch (error) {
-      console.log(`Failed on a chuck: ${error}.`);
+      console.log(`Failed on a chunck: ${error}.`);
       // console.error(error);
       sentryCaptureException(error);
       continue;
