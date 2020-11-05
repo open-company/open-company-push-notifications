@@ -65,7 +65,7 @@ functions:
       sentryRelease: ${file(./config.js):sentryRelease}
       sentryReleaseDeploy: ${file(./config.js):sentryReleaseDeploy}
     handler: handler.sendPushNotifications
-    
+
   getPushNotificationReceipts:
     environment:
       expoAccessToken: ${file(./config.js):expoAccessToken}
